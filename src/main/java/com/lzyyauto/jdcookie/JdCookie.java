@@ -22,6 +22,7 @@ import javax.net.ssl.SSLContext;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
 
@@ -48,7 +49,7 @@ public class JdCookie {
         boolean result = true;
         while (result) {
             try {
-                Thread.sleep(10000);
+                Thread.sleep(5000);
                 result = check_token(cookies);
             } catch (Exception e) {
                 e.printStackTrace();
@@ -69,7 +70,6 @@ public class JdCookie {
 
     public void token_post(List<String> cookies) {
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
         headers.put("Cookie", cookies);
         headers.set("User-Agent", String.format(JDConstant.UA, System.currentTimeMillis()));
         headers.set("referer", String.format(JDConstant.REFERER_POSTTOKEN, System.currentTimeMillis()));
@@ -84,7 +84,14 @@ public class JdCookie {
 
         ResponseEntity<String> response = restTemplate.exchange(String.format(JDConstant.URL_POSTTOKEN, sToken, System.currentTimeMillis()), HttpMethod.POST, entity, String.class);
 
-        oklToken = JSONObject.parseObject(response.getBody()).getString("token");
+        sToken = JSONObject.parseObject(response.getBody()).getString("token");
+        String[] cos = response.getHeaders().get("Set-Cookie").toString().split(";");
+        for (String c : cos) {
+            if (c.indexOf("okl_token") > 0) {
+                oklToken = c.substring(c.indexOf("=") + 1);
+                break;
+            }
+        }
     }
 
     public void image_print() {
@@ -94,7 +101,6 @@ public class JdCookie {
 
     public boolean check_token(List<String> cookies) {
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
         headers.put("Cookie", cookies);
         headers.set("User-Agent", String.format(JDConstant.UA, System.currentTimeMillis()));
         headers.set("referer", String.format(JDConstant.REFERER_POSTTOKEN, System.currentTimeMillis()));
@@ -111,7 +117,15 @@ public class JdCookie {
         ResponseEntity<String> response = restTemplate.exchange(String.format(JDConstant.URL_CHECK, sToken, oklToken), HttpMethod.POST, entity, String.class);
 
         JSONObject jsonObject = JSONObject.parseObject(response.getBody());
-        System.out.println("轮询中....");
+        if (jsonObject.getInteger("errcode") == 0) {
+            System.out.println("扫码成功");
+            System.out.println(jsonObject.getString("message"));
+            return false;
+        } else {
+            System.out.println("轮询中....");
+            System.out.println(jsonObject.getInteger("errcode"));
+            System.out.println(jsonObject.getString("message"));
+        }
         return true;
 
     }
