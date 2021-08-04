@@ -22,9 +22,9 @@ import javax.net.ssl.SSLContext;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author zingliu
@@ -95,7 +95,8 @@ public class JdCookie {
     }
 
     public void image_print() {
-        String priUrl = String.format(JDConstant.URL_PRINT, oklToken);
+        String priUrl = String.format(JDConstant.URL_PRINT, sToken);
+        System.out.println("===>priUrl:" + priUrl);
         System.out.println(getQr(priUrl));
     }
 
@@ -119,7 +120,27 @@ public class JdCookie {
         JSONObject jsonObject = JSONObject.parseObject(response.getBody());
         if (jsonObject.getInteger("errcode") == 0) {
             System.out.println("扫码成功");
-            System.out.println(jsonObject.getString("message"));
+            AtomicReference<String> ptKey = new AtomicReference<>("");
+            AtomicReference<String> ptPin = new AtomicReference<>("");
+            List<String> setCookies = response.getHeaders().get("Set-Cookie");
+            setCookies.forEach(cookie -> {
+                if (cookie.contains("pt_key=")) {
+                    String[] c = cookie.split(";");
+                    for (String s : c) {
+                        if (s.contains("pt_key=")) {
+                            ptKey.set(s);
+                        }
+                    }
+                } else if (cookie.contains("pt_pin=")) {
+                    String[] c = cookie.split(";");
+                    for (String s : c) {
+                        if (s.contains("pt_pin=")) {
+                            ptPin.set(s);
+                        }
+                    }
+                }
+            });
+            System.out.println(ptKey + ";" + ptPin);
             return false;
         } else {
             System.out.println("轮询中....");
